@@ -1,0 +1,22 @@
+[tool.poetry]
+name = "kanjigrid"
+version = "0.0.3"
+description = ""
+authors = ["exc4l <cps0537@gmail.com>"]
+readme = "README.md"
+repository = "https://github.com/exc4l/kanjigrid"
+keywords = ["japanese", "kanji"]
+
+[tool.poetry.dependencies]
+python = "^3.8"
+Pillow = "^8.1.2"
+
+[tool.poetry.scripts]
+greet = "kanjigrid.kanjigrid:greet"
+
+[tool.poetry.dev-dependencies]
+pytest = "^5.2"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"

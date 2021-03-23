@@ -54,3 +54,15 @@ class Jouyou(object):
             6: self.grade6,
             7: self.gradeS,
         }
+
+    def is_in_grading(self, kanji):
+        for val in self.gradings.values():
+            if kanji in val["Kanji"]:
+                return True
+        return False
+
+    def get_all_in_grading(self):
+        allset = set()
+        for val in self.gradings.values():
+            allset |= val["Kanji"]
+        return allset
