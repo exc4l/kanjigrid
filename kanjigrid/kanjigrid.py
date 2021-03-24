@@ -62,8 +62,6 @@ class Gridder:
         super(Gridder, self).__init__()
         self.kfont = load_font(kanjifontpath, kanjifontsize)
         self.hfont = load_font(headerfontpath, headerfontsize)
-        self.ksize = kanjifontsize
-        self.hsize = headerfontsize
         if colordict is None:
             self.colordict = {
                 1: "#cc3232",
@@ -117,9 +115,9 @@ class Gridder:
             fc = self.header_font_color
         draw = ImageDraw.Draw(img)
         if "Noto Sans JP" in fontfam:
-            draw.text((0, -self.ksize / 3.5), text, font=font, fill=fc)
+            draw.text((0, -self.kfont.size / 3.5), text, font=font, fill=fc)
         elif "Meiryo" in fontfam:
-            draw.text((0, -self.ksize / 5), text, font=font, fill=fc)
+            draw.text((0, -self.kfont.size / 5), text, font=font, fill=fc)
         else:
             draw.text((0, 0), text, font=font, fill=fc)
 
@@ -128,7 +126,7 @@ class Gridder:
             bgc = self.kanji_background_color
         if fc is None:
             fc = self.kanji_font_color
-        picto = Image.new("RGB", (self.ksize, self.ksize), color=bgc)
+        picto = Image.new("RGB", (self.kfont.size, self.kfont.size), color=bgc)
         self._draw_on_img(kan, picto, "Kanji")
         return picto
 
@@ -137,8 +135,8 @@ class Gridder:
             bgc = self.background_color
         if fc is None:
             fc = self.header_font_color
-        width = self.ksize * self.columns
-        head = Image.new("RGB", (width, self.hsize), color=self.background_color)
+        width = self.kfont.size * self.columns
+        head = Image.new("RGB", (width, self.hfont.size), color=self.background_color)
         pad_bot = Image.new(
             "RGB", (width, self.padding_under_header), color=self.background_color
         )
@@ -154,19 +152,20 @@ class Gridder:
         self.kcounter.update(self._clean_text(uctext))
 
     def dry_grid(self, grading):
+        """return the total size of the grid with the current settings soontm"""
         # col = self.grid_settings["columns"]
         # padtop = self.grid_settings["padding_above_header"]
         # padbot = self.grid_settings["padding_under_header"]
         # sidepad = self.grid_settings["grid_side_padding"]
         # tot width = 2*sidepad + ksize*columns
-        # header1 = (padtop+padbot+self.hsize)
+        # header1 = (padtop+padbot+self.hfont.size)
         # kanji1 = math.ceil((Anzahl Kanji)/col) * ksize
         pass
 
     def _generate_subgrid(self, grade):
         grade = sorted(list(grade))
-        width = self.ksize * self.columns
-        height = self.ksize * (ceil(len(grade) / self.columns))
+        width = self.kfont.size * self.columns
+        height = self.kfont.size * (ceil(len(grade) / self.columns))
         img = Image.new("RGB", (width, height), color=self.background_color)
         maxkc = max(self.colordict.keys())
         skeys = sorted(list(self.colordict.keys()), reverse=True)
@@ -189,16 +188,16 @@ class Gridder:
                     )
             img.paste(
                 kanjipic,
-                (k * self.ksize % width, (k * self.ksize // width) * self.ksize),
+                (k * self.kfont.size % width, (k * self.kfont.size // width) * self.kfont.size),
             )
         return img
 
     def _generate_stats(self, grading):
-        width = self.ksize * self.columns
-        img = Image.new("RGB", (self.ksize * self.columns, 0))
+        width = self.kfont.size * self.columns
+        img = Image.new("RGB", (self.kfont.size * self.columns, 0))
         head = self._generate_header("Kanji Stats:")
         for key in sorted(list(self.colordict.keys()), reverse=True):
-            tempimg = Image.new("RGB", (width, self.hsize), color=self.background_color)
+            tempimg = Image.new("RGB", (width, self.hfont.size), color=self.background_color)
             if key == max(self.colordict.keys()):
                 statstr = f"{key}+ occurrences: "
                 statstr += str(sum(k >= key for k in self.kcounter.values()))
@@ -207,7 +206,7 @@ class Gridder:
                 statstr += str(sum(k == key for k in self.kcounter.values()))
             draw = ImageDraw.Draw(tempimg)
             draw.text(
-                (self.hsize, 0), statstr, font=self.hfont, fill=self.header_font_color
+                (self.hfont.size, 0), statstr, font=self.hfont, fill=self.header_font_color
             )
             img = self._get_vert_cat(img, tempimg)
         img = self._get_vert_cat(head, img)
@@ -215,16 +214,16 @@ class Gridder:
         zero_occ = len(grade_kanji.difference(self.kcounter.keys()))
         occ_percen = 100 * (len(grade_kanji) - zero_occ) / len(grade_kanji)
         temp_str = f"0 occurrences: {zero_occ} " f"({occ_percen:.2f}% occurred)"
-        tempimg = Image.new("RGB", (width, self.hsize), color=self.background_color)
+        tempimg = Image.new("RGB", (width, self.hfont.size), color=self.background_color)
         draw = ImageDraw.Draw(tempimg)
         draw.text(
-            (self.hsize, 0), temp_str, font=self.hfont, fill=self.header_font_color
+            (self.hfont.size, 0), temp_str, font=self.hfont, fill=self.header_font_color
         )
         img = self._get_vert_cat(img, tempimg)
         return img
 
     def _generate_addition(self, grading):
-        width = self.ksize * self.columns
+        width = self.kfont.size * self.columns
         head = self._generate_header("Additional Kanji:")
         out_kanji = {k for k in self.kcounter.keys() if not grading.is_in_grading(k)}
         subgrid = self._generate_subgrid(out_kanji)
@@ -232,7 +231,7 @@ class Gridder:
         return concat
 
     def _generate_bar_graph(self, grading):
-        width = self.ksize * self.columns - 2 * self.bar_vert_border
+        width = self.kfont.size * self.columns - 2 * self.bar_vert_border
         grade_kanji = grading.get_all_in_grading()
         splits = dict()
         for key in sorted(list(self.colordict.keys()), reverse=True):
@@ -255,11 +254,11 @@ class Gridder:
             splits[k] = int(splits[k] * factor)
             if k == min(splits.keys()):
                 splits[k] = splits[k] + (width - sum(splits.values()))
-        bar = Image.new("RGB", (0, self.ksize))
+        bar = Image.new("RGB", (0, self.kfont.size))
         for k in sorted(list(splits.keys()), reverse=True):
             part = Image.new(
                 "RGB",
-                (splits[k], self.ksize),
+                (splits[k], self.kfont.size),
                 color=self.colordict.get(k, self.background_color),
             )
             bar = self._get_hori_cat(bar, part)
@@ -274,7 +273,7 @@ class Gridder:
             color=self.header_font_color,
         )
         vert_border = Image.new(
-            "RGB", (self.bar_vert_border, self.ksize), color=self.header_font_color
+            "RGB", (self.bar_vert_border, self.kfont.size), color=self.header_font_color
         )
         bar = self._get_hori_cat(vert_border, bar)
         bar = self._get_hori_cat(bar, vert_border)
@@ -291,7 +290,7 @@ class Gridder:
         stats=False,
         bar_graph=False,
     ):
-        grid = Image.new("RGB", (self.ksize * self.columns, 0))
+        grid = Image.new("RGB", (self.kfont.size * self.columns, 0))
         for key in grading.gradings.keys():
             title = grading.gradings[key]["Name"]
             kanjis = grading.gradings[key]["Kanji"]
@@ -310,7 +309,7 @@ class Gridder:
             img = self._generate_stats(grading)
             grid = self._get_vert_cat(grid, img)
         pad_sides = Image.new(
-            "RGB", (self.ksize, grid.height), color=self.background_color
+            "RGB", (self.kfont.size, grid.height), color=self.background_color
         )
         grid = self._get_hori_cat(grid, pad_sides)
         grid = self._get_hori_cat(pad_sides, grid)

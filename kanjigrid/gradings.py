@@ -119,7 +119,7 @@ class JLPT(Gradings):
 class Kanken(Gradings):
     """docstring for Kanken"""
 
-    def __init__(self):
+    def __init__(self, use_level1=False):
         super(Kanken, self).__init__()
         self.level10 = {
             "Name": "Kanken Level 10",
@@ -207,3 +207,5 @@ class Kanken(Gradings):
             11: self.level1a,
             # 12: self.level1,
         }
+        if use_level1:
+            self.gradings[12] = self.level1
