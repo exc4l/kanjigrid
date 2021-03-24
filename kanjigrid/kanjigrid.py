@@ -1,12 +1,6 @@
 from PIL import Image, ImageDraw, ImageFont
-import os
 from collections import Counter
 from math import ceil
-
-
-def greet():
-    print("hey")
-    return "hey"
 
 
 def load_font(fontpath, fontsize):
@@ -19,7 +13,7 @@ def load_font(fontpath, fontsize):
         return ImageFont.truetype(fontpath, size=fontsize)
 
 
-class Gridder(object):
+class Gridder:
     """docstring for Gridder"""
 
     def __init__(
@@ -28,7 +22,17 @@ class Gridder(object):
         kanjifontsize,
         headerfontpath,
         headerfontsize,
+        columns=50,
         colordict=None,
+        bar_padding=30,
+        padding_above_header=30,
+        padding_under_header=50,
+        grid_side_padding=50,
+        bar_hori_border=2,
+        bar_vert_border=1,
+        font_color="#000000",
+        background_color="#FFFFFF",
+        kanji_background_color="#FFFFFF",
     ):
         super(Gridder, self).__init__()
         self.kfont = load_font(kanjifontpath, kanjifontsize)
@@ -45,19 +49,21 @@ class Gridder(object):
             }
         else:
             self.colordict = colordict
-        # i might want to use a more restricted set as this also contains hanzi
+        # i might want to use a more restricted set as this also contains hanzi and radicals
         self.all_kanji_set = set(
             chr(uni) for uni in range(ord("一"), ord("龯") + 1)
         ) | set("〆々")
         self.kcounter = Counter()
-        self.background_color = "#FFFFFF"
-        self.font_color = "#000000"
-        self.padding_above_header = 30
-        self.padding_under_header = 50
-        self.grid_side_padding = (kanjifontsize,)
-        self.columns = 50
-        self.bar_horz_border = 2
-        self.bar_vert_border = 1
+        self.background_color = background_color
+        self.kanji_background_color = kanji_background_color
+        self.font_color = font_color
+        self.padding_above_header = padding_above_header
+        self.padding_under_header = padding_under_header
+        self.bar_padding = bar_padding
+        self.grid_side_padding = grid_side_padding
+        self.columns = columns
+        self.bar_hori_border = bar_hori_border
+        self.bar_vert_border = bar_vert_border
 
     def _clean_text(self, uctext):
         return "".join(filter(self.all_kanji_set.__contains__, uctext))
@@ -76,7 +82,7 @@ class Gridder(object):
 
     def _generate_kanji_picto(self, kan, fc=None, bgc=None):
         if bgc is None:
-            bgc = self.background_color
+            bgc = self.kanji_background_color
         if fc is None:
             fc = self.font_color
         picto = Image.new("RGB", (self.ksize, self.ksize), color=bgc)
@@ -213,12 +219,12 @@ class Gridder(object):
             bar = self._get_hori_cat(bar, part)
         pad = Image.new(
             "RGB",
-            (width + 2 * self.bar_vert_border, self.padding_above_header),
+            (width + 2 * self.bar_vert_border, self.bar_padding),
             color=self.background_color,
         )
         horz_border = Image.new(
             "RGB",
-            (width + 2 * self.bar_vert_border, self.bar_horz_border),
+            (width + 2 * self.bar_vert_border, self.bar_hori_border),
             color=self.font_color,
         )
         vert_border = Image.new(
