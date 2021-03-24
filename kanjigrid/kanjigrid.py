@@ -56,7 +56,8 @@ class Gridder(object):
         self.padding_under_header = 50
         self.grid_side_padding = (kanjifontsize,)
         self.columns = 50
-        self.bar_border = 2
+        self.bar_horz_border = 2
+        self.bar_vert_border = 1
 
     def _clean_text(self, uctext):
         return "".join(filter(self.all_kanji_set.__contains__, uctext))
@@ -163,7 +164,7 @@ class Gridder(object):
         grade_kanji = grading.get_all_in_grading()
         zero_occ = len(grade_kanji.difference(self.kcounter.keys()))
         occ_percen = 100 * (len(grade_kanji) - zero_occ) / len(grade_kanji)
-        temp_str = f"0 occurrences: {zero_occ} " f"({occ_percen:.2f}% occured)"
+        temp_str = f"0 occurrences: {zero_occ} " f"({occ_percen:.2f}% occurred)"
         tempimg = Image.new("RGB", (width, self.hsize), color=self.background_color)
         draw = ImageDraw.Draw(tempimg)
         draw.text((self.hsize, 0), temp_str, font=self.hfont, fill=self.font_color)
@@ -179,7 +180,7 @@ class Gridder(object):
         return concat
 
     def _generate_bar_graph(self, grading):
-        width = self.ksize * self.columns
+        width = self.ksize * self.columns - 2 * self.bar_vert_border
         grade_kanji = grading.get_all_in_grading()
         splits = dict()
         for key in sorted(list(self.colordict.keys()), reverse=True):
@@ -196,7 +197,6 @@ class Gridder(object):
                     if grading.is_in_grading(k)
                 )
         splits[0] = len(grade_kanji.difference(self.kcounter.keys()))
-        print(splits)
         factor = width / sum(splits.values())
         for k in sorted(list(splits.keys()), reverse=True):
             splits[k] = int(splits[k] * factor)
@@ -211,13 +211,24 @@ class Gridder(object):
             )
             bar = self._get_hori_cat(bar, part)
         pad = Image.new(
-            "RGB", (width, self.padding_above_header), color=self.background_color
+            "RGB",
+            (width + 2 * self.bar_vert_border, self.padding_above_header),
+            color=self.background_color,
         )
-        border = Image.new("RGB", (width, self.bar_border), color=self.font_color)
-        bar = self._get_vert_cat(border, bar)
-        bar = self._get_vert_cat(bar, border)
+        horz_border = Image.new(
+            "RGB",
+            (width + 2 * self.bar_vert_border, self.bar_horz_border),
+            color=self.font_color,
+        )
+        vert_border = Image.new(
+            "RGB", (self.bar_vert_border, self.ksize), color=self.font_color
+        )
+        bar = self._get_hori_cat(vert_border, bar)
+        bar = self._get_hori_cat(bar, vert_border)
+        bar = self._get_vert_cat(horz_border, bar)
+        bar = self._get_vert_cat(bar, horz_border)
         bar = self._get_vert_cat(pad, bar)
-        bar = self._get_vert_cat(bar, pad)
+        # bar = self._get_vert_cat(bar, pad)
         return bar
 
     def make_grid(
@@ -235,12 +246,13 @@ class Gridder(object):
             subgrid = self._generate_subgrid(kanjis)
             concat = self._get_vert_cat(head, subgrid)
             grid = self._get_vert_cat(grid, concat)
-        if outside_of_grading:
-            img = self._generate_outside(grading)
-            grid = self._get_vert_cat(grid, img)
         if bar_graph:
             img = self._generate_bar_graph(grading)
             grid = self._get_vert_cat(grid, img)
+        if outside_of_grading:
+            img = self._generate_outside(grading)
+            grid = self._get_vert_cat(grid, img)
+
         if stats:
             img = self._generate_stats(grading)
             grid = self._get_vert_cat(grid, img)
