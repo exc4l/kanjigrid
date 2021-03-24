@@ -192,10 +192,11 @@ class Gridder(object):
                 )
             else:
                 splits[key] = sum(
-                    self.kcounter[k] == key
+                    self.kcounter[k] >= key and self.kcounter[k] < prev_key
                     for k in self.kcounter.keys()
                     if grading.is_in_grading(k)
                 )
+            prev_key = key
         splits[0] = len(grade_kanji.difference(self.kcounter.keys()))
         factor = width / sum(splits.values())
         for k in sorted(list(splits.keys()), reverse=True):
