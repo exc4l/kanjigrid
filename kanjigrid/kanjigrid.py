@@ -5,12 +5,36 @@ from math import ceil
 
 def load_font(fontpath, fontsize):
     if fontpath == "Kanji":
-        # do fancy font loader here
-        pass
+        fonts = [
+            "NotoSansJP-Regular.otf",
+            "yumin.ttf",
+            "meiryo.ttc",
+            "YuGothM.ttc",
+            "msgothic.ttc",
+            "msmincho.ttc",
+        ]
+        for f in fonts:
+            try:
+                fl = ImageFont.truetype(f, size=fontsize)
+            except OSError:
+                continue
+            print(f"Loaded {f}")
+            return fl
     elif fontpath == "Header":
-        pass
+        fonts = ["Helvetica.ttf", "cambria.ttc", "georgia.ttf", "times.ttf"]
+        for f in fonts:
+            try:
+                fl = ImageFont.truetype(f, size=fontsize)
+            except OSError:
+                continue
+            print(f"Loaded {f}")
+            return fl
     else:
-        return ImageFont.truetype(fontpath, size=fontsize)
+        try:
+            return ImageFont.truetype(fontpath, size=fontsize)
+        except OSError as e:
+            print("Couldn't find the provided font. Is it installed for all users?")
+        raise e
 
 
 class Gridder:
@@ -25,12 +49,13 @@ class Gridder:
         columns=50,
         colordict=None,
         bar_padding=30,
-        padding_above_header=30,
-        padding_under_header=50,
+        padding_above_header=50,
+        padding_under_header=30,
         grid_side_padding=50,
         bar_hori_border=2,
         bar_vert_border=1,
-        font_color="#000000",
+        kanji_font_color="#000000",
+        header_font_color="#000000",
         background_color="#FFFFFF",
         kanji_background_color="#FFFFFF",
     ):
@@ -56,7 +81,8 @@ class Gridder:
         self.kcounter = Counter()
         self.background_color = background_color
         self.kanji_background_color = kanji_background_color
-        self.font_color = font_color
+        self.kanji_font_color = kanji_font_color
+        self.header_font_color = header_font_color
         self.padding_above_header = padding_above_header
         self.padding_under_header = padding_under_header
         self.bar_padding = bar_padding
@@ -80,24 +106,37 @@ class Gridder:
         res.paste(im2, (im1.width, 0))
         return res
 
+    def _draw_on_img(self, text, img, mode):
+        if mode == "Kanji":
+            font = self.kfont
+            fontfam = self.kfont.font.family
+            fc = self.kanji_font_color
+        if mode == "Header":
+            font = self.hfont
+            fontfam = self.hfont.font.family
+            fc = self.header_font_color
+        draw = ImageDraw.Draw(img)
+        if "Noto Sans JP" in fontfam:
+            draw.text((0, -self.ksize / 3.5), text, font=font, fill=fc)
+        elif "Meiryo" in fontfam:
+            draw.text((0, -self.ksize / 5), text, font=font, fill=fc)
+        else:
+            draw.text((0, 0), text, font=font, fill=fc)
+
     def _generate_kanji_picto(self, kan, fc=None, bgc=None):
         if bgc is None:
             bgc = self.kanji_background_color
         if fc is None:
-            fc = self.font_color
+            fc = self.kanji_font_color
         picto = Image.new("RGB", (self.ksize, self.ksize), color=bgc)
-        kandraw = ImageDraw.Draw(picto)
-        if self.kfont.font.family == "Noto Sans JP":
-            kandraw.text((0, -self.ksize / 3.5), kan, font=self.kfont, fill=fc)
-        else:
-            kandraw.text((0, 0), kan, font=self.kfont, fill=fc)
+        self._draw_on_img(kan, picto, "Kanji")
         return picto
 
     def _generate_header(self, title, fc=None, bgc=None):
         if bgc is None:
             bgc = self.background_color
         if fc is None:
-            fc = self.font_color
+            fc = self.header_font_color
         width = self.ksize * self.columns
         head = Image.new("RGB", (width, self.hsize), color=self.background_color)
         pad_bot = Image.new(
@@ -106,14 +145,9 @@ class Gridder:
         pad_top = Image.new(
             "RGB", (width, self.padding_above_header), color=self.background_color
         )
-        draw = ImageDraw.Draw(head)
-        if self.hfont.font.family == "Noto Sans JP":
-            draw.text((0, -self.hsize / 3.5), title, font=self.hfont, fill=fc)
-        else:
-            draw.text((0, 0), title, font=self.hfont, fill=fc)
-        head = self._get_vert_cat(pad_top, head)
         head = self._get_vert_cat(head, pad_bot)
-
+        self._draw_on_img(title, head, mode="Header")
+        head = self._get_vert_cat(pad_top, head)
         return head
 
     def feed_text(self, uctext):
@@ -134,17 +168,25 @@ class Gridder:
         width = self.ksize * self.columns
         height = self.ksize * (ceil(len(grade) / self.columns))
         img = Image.new("RGB", (width, height), color=self.background_color)
+        maxkc = max(self.colordict.keys())
+        skeys = sorted(list(self.colordict.keys()), reverse=True)
         for k in range(len(grade)):
             kanji = grade[k]
             kcount = self.kcounter.get(kanji, 0)
-            if kcount >= max(self.colordict.keys()):
+            if kcount >= maxkc:
                 kanjipic = self._generate_kanji_picto(
                     kanji, bgc=self.colordict[max(self.colordict.keys())]
                 )
             else:
-                kanjipic = self._generate_kanji_picto(
-                    kanji, bgc=self.colordict.get(kcount, self.background_color)
-                )
+                if res := list(filter(lambda x: x <= kcount, skeys)):
+                    kanjipic = self._generate_kanji_picto(
+                        kanji,
+                        bgc=self.colordict.get(res[0], self.kanji_background_color),
+                    )
+                else:
+                    kanjipic = self._generate_kanji_picto(
+                        kanji, bgc=self.kanji_background_color
+                    )
             img.paste(
                 kanjipic,
                 (k * self.ksize % width, (k * self.ksize // width) * self.ksize),
@@ -164,7 +206,9 @@ class Gridder:
                 statstr = f"{key} occurrences: "
                 statstr += str(sum(k == key for k in self.kcounter.values()))
             draw = ImageDraw.Draw(tempimg)
-            draw.text((self.hsize, 0), statstr, font=self.hfont, fill=self.font_color)
+            draw.text(
+                (self.hsize, 0), statstr, font=self.hfont, fill=self.header_font_color
+            )
             img = self._get_vert_cat(img, tempimg)
         img = self._get_vert_cat(head, img)
         grade_kanji = grading.get_all_in_grading()
@@ -173,13 +217,15 @@ class Gridder:
         temp_str = f"0 occurrences: {zero_occ} " f"({occ_percen:.2f}% occurred)"
         tempimg = Image.new("RGB", (width, self.hsize), color=self.background_color)
         draw = ImageDraw.Draw(tempimg)
-        draw.text((self.hsize, 0), temp_str, font=self.hfont, fill=self.font_color)
+        draw.text(
+            (self.hsize, 0), temp_str, font=self.hfont, fill=self.header_font_color
+        )
         img = self._get_vert_cat(img, tempimg)
         return img
 
-    def _generate_outside(self, grading):
+    def _generate_addition(self, grading):
         width = self.ksize * self.columns
-        head = self._generate_header("Outside of Grading:")
+        head = self._generate_header("Additional Kanji:")
         out_kanji = {k for k in self.kcounter.keys() if not grading.is_in_grading(k)}
         subgrid = self._generate_subgrid(out_kanji)
         concat = self._get_vert_cat(head, subgrid)
@@ -225,10 +271,10 @@ class Gridder:
         horz_border = Image.new(
             "RGB",
             (width + 2 * self.bar_vert_border, self.bar_hori_border),
-            color=self.font_color,
+            color=self.header_font_color,
         )
         vert_border = Image.new(
-            "RGB", (self.bar_vert_border, self.ksize), color=self.font_color
+            "RGB", (self.bar_vert_border, self.ksize), color=self.header_font_color
         )
         bar = self._get_hori_cat(vert_border, bar)
         bar = self._get_hori_cat(bar, vert_border)
@@ -257,7 +303,7 @@ class Gridder:
             img = self._generate_bar_graph(grading)
             grid = self._get_vert_cat(grid, img)
         if outside_of_grading:
-            img = self._generate_outside(grading)
+            img = self._generate_addition(grading)
             grid = self._get_vert_cat(grid, img)
 
         if stats:
