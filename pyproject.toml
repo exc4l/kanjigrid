@@ -1,11 +1,19 @@
 [tool.poetry]
 name = "kanjigrid"
-version = "0.0.3"
-description = ""
+version = "0.0.4"
+description = "Create Kanji Grids out of Text"
 authors = ["exc4l <cps0537@gmail.com>"]
 readme = "README.md"
 repository = "https://github.com/exc4l/kanjigrid"
 keywords = ["japanese", "kanji"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Education",
+    "Intended Audience :: End Users/Desktop",
+    "Topic :: Multimedia :: Graphics",
+    "Topic :: Text Processing :: Linguistic",
+    "Natural Language :: Japanese"
+]
 
 [tool.poetry.dependencies]
 python = "^3.8"
