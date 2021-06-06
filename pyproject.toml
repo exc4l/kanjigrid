@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "kanjigrid"
-version = "0.0.4"
+version = "0.0.5"
 description = "Create Kanji Grids out of Text"
 authors = ["exc4l <cps0537@gmail.com>"]
 readme = "README.md"
